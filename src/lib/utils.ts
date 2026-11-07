@@ -1,10 +1,6 @@
-/** Вычисляет уровень "толстоты" синицы по количеству тапов */
-export function getFatLevel(totalTaps: number): number {
-  if (totalTaps >= 10000) return 4
-  if (totalTaps >= 3000) return 3
-  if (totalTaps >= 1000) return 2
-  if (totalTaps >= 300) return 1
-  return 0
+/** Уровень "толстоты" синицы по tap_cycle (0–4) */
+export function getFatLevel(tapCycle: number): number {
+  return Math.max(0, Math.min(4, tapCycle))
 }
 
 /** Форматирует число монет */
@@ -18,11 +14,9 @@ export function formatCoins(coins: number): string {
   return coins.toString()
 }
 
-/** Награда за тап (с небольшим рандомом) */
-export function getTapReward(totalTaps: number): number {
-  const base = 1
-  const bonus = Math.floor(totalTaps / 5000) // +1 за каждые 5к тапов
-  return base + bonus
+/** Награда за тап */
+export function getTapReward(_totalTaps: number): number {
+  return 1
 }
 
 /** Список доступных скинов */

@@ -6,7 +6,7 @@ interface ProfileProps {
 }
 
 export function Profile({ user }: ProfileProps) {
-  const fatLevel = getFatLevel(user.total_taps)
+  const fatLevel = getFatLevel(user.tap_cycle ?? 0)
   const skin = SKINS.find((s) => s.id === user.current_skin)
 
   return (

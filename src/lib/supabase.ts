@@ -4,44 +4,32 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase env variables are missing')
+  throw new Error('Не настроено подключение к Supabase')
 }
 
-export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || ''
-)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-export async function getOrCreateUser(telegramUser: {
-  id: number
-  first_name: string
-  last_name?: string
-  username?: string
-  photo_url?: string
-}) {
-  const { data: existing } = await supabase
-    .from('users')
-    .select('*')
-    .eq('telegram_id', telegramUser.id)
-    .single()
+export function getTelegramInitData(): string {
+  return window.Telegram?.WebApp?.initData || ''
+}
 
-  if (existing) return existing
+export async function authenticateUser() {
+  const initData = getTelegramInitData()
 
-  const { data: created, error } = await supabase
-    .from('users')
-    .insert({
-      telegram_id: telegramUser.id,
-      first_name: telegramUser.first_name,
-      last_name: telegramUser.last_name || null,
-      username: telegramUser.username || null,
-      avatar_url: telegramUser.photo_url || null,
-      coins: 0,
-      total_taps: 0,
-      current_skin: 'default',
-    })
-    .select()
-    .single()
+  if (!initData) {
+    throw new Error('Открой Sinica через Telegram-бота, а не через обычный браузер.')
+  }
 
-  if (error) throw error
-  return created
+  const { data, error } = await supabase.functions.invoke('auth', {
+    body: { initData },
+  })
+
+  if (error) throw new Error(error.message || 'Ошибка авторизации')
+  if (!data?.success || !data?.user) {
+    throw new Error(data?.message || 'Не удалось подтвердить Telegram')
+  }
+
+  return {
+    user: { ...data.user, owned_skins: data.owned_skins || ['default'] },
+  }
 }
