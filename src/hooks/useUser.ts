@@ -15,8 +15,8 @@ export function useUser() {
       const tg = window.Telegram?.WebApp
       tg?.ready()
       tg?.expand()
-      tg?.setHeaderColor('#1a1a2e')
-      tg?.setBackgroundColor('#1a1a2e')
+      tg?.setHeaderColor('#07060f')
+      tg?.setBackgroundColor('#07060f')
 
       const result = await authenticateUser()
       setUser(result.user as User)
