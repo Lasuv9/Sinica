@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { getSkinImage } from '@/lib/utils'
 
 interface BirdProps {
@@ -9,12 +10,26 @@ interface BirdProps {
 
 export function Bird({ skinId, fatLevel, isPopping, onTap }: BirdProps) {
   const src = getSkinImage(skinId, fatLevel)
+  const [pressed, setPressed] = useState(false)
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault()
+    setPressed(true)
+    onTap()
+  }
+
+  const handlePointerUp = () => setPressed(false)
+  const handlePointerLeave = () => setPressed(false)
 
   return (
     <button
       type="button"
-      className={`bird-container ${isPopping ? 'popping' : ''}`}
-      onClick={onTap}
+      className={`bird-container ${isPopping ? 'popping' : ''} ${pressed ? 'pressed' : ''}`}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerLeave}
+      onPointerLeave={handlePointerLeave}
+      // onClick отключён — всё через pointerdown, без двойных срабатываний
       aria-label="Тапнуть синицу"
     >
       <div className="bird-coin">

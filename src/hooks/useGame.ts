@@ -6,50 +6,75 @@ import { getTelegramInitData, supabase } from '@/lib/supabase'
 export function useGame(user: User | null, setUser: (u: User) => void) {
   const [isPopping, setIsPopping] = useState(false)
   const [lastReward, setLastReward] = useState(0)
-  const isTapping = useRef(false)
+  const isAnimating = useRef(false)
+  const userRef = useRef(user)
+  userRef.current = user
 
   const fatLevel = user ? (user.tap_cycle ?? 0) : 0
 
-  const tap = useCallback(async () => {
-    if (!user || isTapping.current) return
-    isTapping.current = true
+  const tap = useCallback(() => {
+    const current = userRef.current
+    if (!current) return
 
-    try {
-      const { data, error } = await supabase.functions.invoke('tap', {
-        body: {
-          initData: getTelegramInitData(),
-          request_id: crypto.randomUUID(),
-        },
-      })
+    // Короткая блокировка только на анимацию — сеть больше не глотает тапы
+    if (isAnimating.current) return
+    isAnimating.current = true
 
-      if (error) throw error
-      if (!data?.success) throw new Error(data?.message || 'Не удалось засчитать нажатие')
+    // Оптимистичное обновление сразу
+    const nextCoins = current.coins + 1
+    const nextTaps = current.total_taps + 1
+    const nextCycle = ((current.tap_cycle ?? 0) + 1) % 5
 
-      setUser({
-        ...user,
-        coins: data.coins,
-        total_taps: data.total_taps,
-        tap_cycle: data.tap_cycle,
-      })
+    setUser({
+      ...current,
+      coins: nextCoins,
+      total_taps: nextTaps,
+      tap_cycle: nextCycle,
+    })
 
-      setLastReward(1)
-      haptic('light')
+    setLastReward(1)
+    setIsPopping(true)
+    playPopSound()
+    haptic('light')
 
-      if (data.popped) {
-        setIsPopping(true)
-        playPopSound()
-        haptic('success')
-        window.setTimeout(() => setIsPopping(false), 420)
+    window.setTimeout(() => {
+      setIsPopping(false)
+      isAnimating.current = false
+    }, 140)
+
+    // Синхронизация с сервером в фоне (не блокирует UI)
+    void (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('tap', {
+          body: {
+            initData: getTelegramInitData(),
+            request_id: crypto.randomUUID(),
+          },
+        })
+
+        if (error || !data?.success) return
+
+        const latest = userRef.current
+        if (!latest) return
+
+        // Подтягиваем серверные значения, не откатывая локальные тапы назад
+        setUser({
+          ...latest,
+          coins: Math.max(latest.coins, data.coins ?? latest.coins),
+          total_taps: Math.max(latest.total_taps, data.total_taps ?? latest.total_taps),
+          tap_cycle:
+            typeof data.tap_cycle === 'number' ? data.tap_cycle : latest.tap_cycle,
+        })
+
+        if (data.popped) {
+          haptic('success')
+        }
+      } catch (e) {
+        // Тихо: тап уже засчитан локально, не спамим алертами
+        console.warn('Tap sync error', e)
       }
-    } catch (e) {
-      console.error('Tap error', e)
-      window.Telegram?.WebApp?.showAlert(
-        e instanceof Error ? e.message : 'Ошибка соединения. Попробуй ещё раз.'
-      )
-    } finally {
-      isTapping.current = false
-    }
-  }, [user, setUser])
+    })()
+  }, [setUser])
 
   return { fatLevel, isPopping, lastReward, tap }
 }
