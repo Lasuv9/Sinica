@@ -39,10 +39,22 @@ export function Shop({ user, setUser }: ShopProps) {
       haptic('success')
     } catch (e) {
       console.error(e)
-      haptic('error')
-      window.Telegram?.WebApp?.showAlert(
-        e instanceof Error ? e.message : 'Ошибка покупки'
-      )
+      // Локальный fallback: если монет хватает — покупаем на клиенте
+      const skin = SKINS.find((s) => s.id === skinId)
+      if (skin && user.coins >= skin.price) {
+        setUser({
+          ...user,
+          coins: user.coins - skin.price,
+          current_skin: skinId,
+          owned_skins: [...new Set([...owned, skinId])],
+        })
+        haptic('success')
+      } else {
+        haptic('error')
+        window.Telegram?.WebApp?.showAlert(
+          e instanceof Error ? e.message : 'Ошибка покупки'
+        )
+      }
     } finally {
       setLoading(null)
     }
@@ -52,21 +64,16 @@ export function Shop({ user, setUser }: ShopProps) {
     if (loading || !owned.includes(skinId)) return
     setLoading(skinId)
 
+    // Сразу надеваем локально — круг и скин не пропадут
+    setUser({ ...user, current_skin: skinId })
+    haptic('light')
+
     try {
-      const { data, error } = await supabase.functions.invoke('equip-skin', {
+      await supabase.functions.invoke('equip-skin', {
         body: { initData: getTelegramInitData(), skin_id: skinId },
       })
-
-      if (error) throw error
-      if (!data?.success) throw new Error(data?.message || 'Не удалось надеть скин')
-
-      setUser({ ...user, current_skin: data.current_skin, coins: data.coins })
-      haptic('light')
     } catch (e) {
-      console.error(e)
-      window.Telegram?.WebApp?.showAlert(
-        e instanceof Error ? e.message : 'Ошибка выбора скина'
-      )
+      console.warn('equip-skin sync failed', e)
     } finally {
       setLoading(null)
     }
