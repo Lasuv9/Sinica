@@ -51,6 +51,8 @@ body {
   user-select: none;
   -webkit-user-select: none;
   overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
   background:
     radial-gradient(1200px 600px at 10% -10%, rgba(168, 85, 247, 0.35), transparent 55%),
     radial-gradient(900px 500px at 100% 0%, rgba(57, 255, 20, 0.12), transparent 50%),
@@ -258,53 +260,163 @@ body::after {
   min-height: 280px;
 }
 
+
 .bird-container {
   position: relative;
+  width: 260px;
+  height: 260px;
+  border: none;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
   touch-action: manipulation;
-  border-radius: 50%;
-  padding: 12px;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.bird-container::before {
-  content: '';
-  position: absolute;
-  inset: 0;
+.bird-container:focus,
+.bird-container:focus-visible,
+.bird-container:active {
+  outline: none;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bird-coin {
+  position: relative;
+  width: 240px;
+  height: 240px;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(57, 255, 20, 0.12) 0%,
-    rgba(168, 85, 247, 0.08) 45%,
-    transparent 70%
-  );
-  filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 3D coin body */
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.18), transparent 40%),
+    radial-gradient(circle at 50% 50%, #0a0a0f 0%, #050508 70%, #000 100%);
+  box-shadow:
+    0 0 0 3px rgba(168, 85, 247, 0.55),
+    0 0 0 8px rgba(168, 85, 247, 0.18),
+    0 0 40px rgba(168, 85, 247, 0.35),
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    inset 0 -12px 28px rgba(0, 0, 0, 0.65),
+    inset 0 10px 20px rgba(255, 255, 255, 0.08);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.bird-container.popping .bird-coin {
+  transform: scale(0.94);
+  box-shadow:
+    0 0 0 3px rgba(57, 255, 20, 0.7),
+    0 0 0 10px rgba(57, 255, 20, 0.2),
+    0 0 48px rgba(57, 255, 20, 0.45),
+    0 14px 32px rgba(0, 0, 0, 0.5),
+    inset 0 -12px 28px rgba(0, 0, 0, 0.65),
+    inset 0 10px 20px rgba(255, 255, 255, 0.1);
+}
+
+.bird-coin-ring {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 2px solid rgba(168, 85, 247, 0.45);
+  box-shadow:
+    inset 0 0 20px rgba(168, 85, 247, 0.25),
+    0 0 16px rgba(168, 85, 247, 0.2);
   pointer-events: none;
 }
 
-.bird {
-  width: 220px;
-  height: 220px;
-  object-fit: contain;
-  transition: transform 0.12s ease;
-  filter: drop-shadow(0 0 24px rgba(168, 85, 247, 0.35))
-    drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+.bird-coin-inner {
   position: relative;
-  z-index: 1;
+  width: 78%;
+  height: 78%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.9);
+}
+
+.bird-coin-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    transparent 38%,
+    transparent 62%,
+    rgba(168, 85, 247, 0.12) 100%
+  );
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.bird {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  transition: transform 0.12s ease;
+  /* hide rectangular black plate edges via circular crop parent */
 }
 
 .bird.pop {
-  animation: pop 0.15s ease;
+  animation: bird-pop 0.18s ease;
 }
 
-@keyframes pop {
+@keyframes bird-pop {
   0% { transform: scale(1); }
   50% { transform: scale(0.9); }
   100% { transform: scale(1); }
 }
 
+/* Neon sparks on tap */
+.spark {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--neon);
+  box-shadow:
+    0 0 8px var(--neon),
+    0 0 16px var(--neon-glow);
+  pointer-events: none;
+  animation: spark-fly 0.55s ease-out forwards;
+  z-index: 5;
+}
+
+.spark.s1 { top: 50%; left: 50%; --dx: -70px; --dy: -90px; }
+.spark.s2 { top: 50%; left: 50%; --dx: 80px; --dy: -70px; }
+.spark.s3 { top: 50%; left: 50%; --dx: -90px; --dy: 20px; }
+.spark.s4 { top: 50%; left: 50%; --dx: 95px; --dy: 30px; }
+.spark.s5 { top: 50%; left: 50%; --dx: -40px; --dy: 95px; }
+.spark.s6 { top: 50%; left: 50%; --dx: 50px; --dy: 100px; }
+.spark.s7 { top: 50%; left: 50%; --dx: 0px; --dy: -110px; }
+.spark.s8 { top: 50%; left: 50%; --dx: -100px; --dy: -40px; }
+
+@keyframes spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2);
+  }
+}
+
 .floating-reward {
   position: absolute;
-  top: 18%;
+  top: 12%;
   left: 50%;
   transform: translateX(-50%);
   font-size: 28px;
@@ -313,7 +425,7 @@ body::after {
   text-shadow: 0 0 16px var(--neon-glow);
   pointer-events: none;
   animation: float-up 0.65s ease forwards;
-  z-index: 2;
+  z-index: 6;
 }
 
 @keyframes float-up {
@@ -378,15 +490,24 @@ body::after {
   height: 64px;
   border-radius: 16px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--glass-border);
+  /* единый тёмный фон под все скины — скрывает чёрные подложки PNG */
+  background:
+    radial-gradient(circle at 50% 45%, #1a1528 0%, #0a0814 70%, #05040a 100%);
+  border: 1px solid rgba(168, 85, 247, 0.28);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
 }
 
 .shop-item-image img {
-  width: 100%;
-  height: 100%;
+  width: 88%;
+  height: 88%;
   object-fit: contain;
+  object-position: center;
+  /* чуть сглаживает стык чёрного фона картинки с подложкой */
+  mix-blend-mode: normal;
 }
 
 .shop-item-info {
@@ -775,4 +896,16 @@ body::after {
 .main::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+
+/* Kill mobile blue tap flash */
+button, a, .nav-item, .bird-container, .shop-item {
+  -webkit-tap-highlight-color: transparent !important;
+  outline: none;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-select: none;
 }

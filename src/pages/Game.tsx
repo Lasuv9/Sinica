@@ -9,7 +9,7 @@ interface GameProps {
 }
 
 export function Game({ user, setUser }: GameProps) {
-  const { fatLevel, isPopping, lastReward, tap } = useGame(user, setUser)
+  const { fatLevel, isPopping, tap } = useGame(user, setUser)
 
   return (
     <div className="page game-page">
@@ -22,9 +22,6 @@ export function Game({ user, setUser }: GameProps) {
           isPopping={isPopping}
           onTap={tap}
         />
-        {lastReward > 0 && isPopping && (
-          <div className="floating-reward">+{lastReward}</div>
-        )}
       </div>
 
       <div className="game-hint">
