@@ -34,7 +34,11 @@ export default function App() {
 
   return (
     <div className="app">
-      <Header coins={user.coins} username={user.username} />
+      <Header
+        coins={user.coins}
+        username={user.username}
+        showTelegram={page === 'game'}
+      />
 
       <main className="main">
         {page === 'game' && <Game user={user} setUser={setUser} />}
