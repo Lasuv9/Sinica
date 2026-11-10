@@ -10,6 +10,7 @@ const SKIN_PRICES: Record<string, number> = {
   default: 0,
   chekushka: 500,
   melstroy: 1500,
+  'ogr-mag': 2000,
 }
 
 serve(async (req) => {

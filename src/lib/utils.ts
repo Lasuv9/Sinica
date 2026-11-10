@@ -42,6 +42,13 @@ export const SKINS = [
     price: 1500,
     description: 'Синица в стиле Мелстроя',
   },
+  {
+    id: 'ogr-mag',
+    name: 'Огр Маг',
+    image: '/images/skins/ogr-mag.png',
+    price: 2000,
+    description: 'Синица в стиле Огр Мага',
+  },
 ] as const
 
 export function getSkinImage(skinId: string, fatLevel: number): string {
