@@ -1,5 +1,12 @@
+import { useState } from 'react'
 import { User } from '@/types'
 import { formatCoins, getFatLevel, SKINS } from '@/lib/utils'
+import { Modal } from '@/components/Modal'
+import {
+  PRIVACY_POLICY_FOOTER,
+  PRIVACY_POLICY_SECTIONS,
+  PRIVACY_POLICY_UPDATED,
+} from '@/lib/privacyPolicy'
 
 const CHANNEL_URL = 'https://t.me/sinicagame'
 
@@ -17,6 +24,7 @@ function openChannel() {
 }
 
 export function Profile({ user }: ProfileProps) {
+  const [privacyOpen, setPrivacyOpen] = useState(false)
   const fatLevel = getFatLevel(user.tap_cycle ?? 0)
   const skin = SKINS.find((s) => s.id === user.current_skin)
 
@@ -65,6 +73,14 @@ export function Profile({ user }: ProfileProps) {
         📢 Подписаться на канал
       </button>
 
+      <button
+        type="button"
+        className="btn btn-secondary channel-btn privacy-btn"
+        onClick={() => setPrivacyOpen(true)}
+      >
+        🔒 Политика конфиденциальности
+      </button>
+
       <div className="profile-info">
         <p>
           <strong>Telegram ID:</strong> {user.telegram_id}
@@ -74,6 +90,34 @@ export function Profile({ user }: ProfileProps) {
           {new Date(user.created_at).toLocaleDateString('ru-RU')}
         </p>
       </div>
+
+      <Modal
+        open={privacyOpen}
+        onClose={() => setPrivacyOpen(false)}
+        title="Политика конфиденциальности"
+      >
+        <div className="privacy-content">
+          <p className="privacy-updated">
+            Дата последнего обновления: {PRIVACY_POLICY_UPDATED}
+          </p>
+          {PRIVACY_POLICY_SECTIONS.map((section) => (
+            <section key={section.title} className="privacy-section">
+              <h3>{section.title}</h3>
+              {section.body.map((line, i) => (
+                <p key={`${section.title}-${i}`}>{line}</p>
+              ))}
+            </section>
+          ))}
+          <p className="privacy-footer">{PRIVACY_POLICY_FOOTER}</p>
+          <button
+            type="button"
+            className="btn btn-primary channel-btn"
+            onClick={openChannel}
+          >
+            Открыть канал поддержки
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }
