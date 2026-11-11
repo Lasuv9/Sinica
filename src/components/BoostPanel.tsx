@@ -10,6 +10,7 @@ interface BoostPanelProps {
 
 export function BoostPanel({ user, setUser }: BoostPanelProps) {
   const [buying, setBuying] = useState<number | null>(null)
+  const [pendingLabel, setPendingLabel] = useState<string | null>(null)
   const [, setTick] = useState(0)
 
   const expiresAt = user.boost_expires_at || user.active_boost?.expires_at || null
@@ -33,12 +34,12 @@ export function BoostPanel({ user, setUser }: BoostPanelProps) {
         })
       }
       setTick((t) => t + 1)
-    }, 1000)
+    }, 250)
     return () => window.clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expiresAt, user.id])
 
-  const buy = async (mult: number, price: number) => {
+  const buy = async (mult: number, price: number, name: string) => {
     if (buying) return
     if (user.coins < price) {
       haptic('error')
@@ -52,7 +53,11 @@ export function BoostPanel({ user, setUser }: BoostPanelProps) {
       return
     }
 
+    // Мгновенный UI-фидбек до ответа сервера
     setBuying(mult)
+    setPendingLabel(`Активируем ${name}…`)
+    haptic('light')
+
     try {
       const { data, error } = await supabase.functions.invoke('buy-boost', {
         body: {
@@ -67,19 +72,23 @@ export function BoostPanel({ user, setUser }: BoostPanelProps) {
         throw new Error(data?.message || 'Не удалось купить улучшение')
       }
 
+      const exp = data.boost_expires_at ?? null
+      const m = data.multiplier ?? mult
+
       setUser({
         ...user,
-        coins: typeof data.coins === 'number' ? data.coins : user.coins,
-        boost_multiplier: data.multiplier ?? mult,
-        boost_expires_at: data.boost_expires_at ?? null,
-        active_boost: data.boost_expires_at
-          ? { multiplier: data.multiplier ?? mult, expires_at: data.boost_expires_at }
-          : null,
+        coins: typeof data.coins === 'number' ? data.coins : user.coins - price,
+        boost_multiplier: m,
+        boost_expires_at: exp,
+        active_boost: exp ? { multiplier: m, expires_at: exp } : null,
       })
+      setPendingLabel(`${name} активен!`)
       haptic('success')
+      window.setTimeout(() => setPendingLabel(null), 1200)
     } catch (e) {
       console.error(e)
       haptic('error')
+      setPendingLabel(null)
       window.Telegram?.WebApp?.showAlert(
         e instanceof Error ? e.message : 'Ошибка покупки улучшения'
       )
@@ -91,15 +100,22 @@ export function BoostPanel({ user, setUser }: BoostPanelProps) {
   return (
     <div className="boost-panel">
       <div className="boost-panel-header">
-        <h2 className="boost-title">Улучшения</h2>
+        <div className="boost-title-wrap">
+          <span className="boost-title-icon">⚡</span>
+          <h2 className="boost-title">Улучшения</h2>
+        </div>
         {isActive ? (
           <span className="boost-active-badge">
-            Активно ×{multiplier} · {formatBoostTime(msLeft)}
+            ×{multiplier} · {formatBoostTime(msLeft)}
           </span>
         ) : (
-          <span className="boost-idle-badge">×1 обычный режим</span>
+          <span className="boost-idle-badge">×1</span>
         )}
       </div>
+
+      {pendingLabel && (
+        <div className="boost-pending">{pendingLabel}</div>
+      )}
 
       <div className="boost-grid">
         {BOOSTS.map((b) => {
@@ -108,22 +124,31 @@ export function BoostPanel({ user, setUser }: BoostPanelProps) {
           return (
             <div
               key={b.id}
-              className={`boost-card ${activeThis ? 'active' : ''}`}
+              className={`boost-card ${activeThis ? 'active' : ''} ${buying === b.multiplier ? 'buying' : ''}`}
             >
               <div className="boost-card-top">
                 <span className="boost-name">{b.name}</span>
                 <span className="boost-mult">×{b.multiplier}</span>
               </div>
-              <div className="boost-meta">5 мин · {formatCoins(b.price)} 💰</div>
+              <div className="boost-meta">
+                <span>5 мин</span>
+                <span className="boost-price">{formatCoins(b.price)} 💰</span>
+              </div>
               {activeThis ? (
-                <button className="btn btn-secondary boost-btn" disabled>
-                  {formatBoostTime(msLeft)}
-                </button>
+                <div className="boost-timer-bar">
+                  <div
+                    className="boost-timer-fill"
+                    style={{
+                      width: `${Math.max(0, Math.min(100, (msLeft / 300000) * 100))}%`,
+                    }}
+                  />
+                  <span className="boost-timer-text">{formatBoostTime(msLeft)}</span>
+                </div>
               ) : (
                 <button
                   className="btn btn-primary boost-btn"
-                  disabled={!canBuy || buying === b.multiplier}
-                  onClick={() => void buy(b.multiplier, b.price)}
+                  disabled={!canBuy}
+                  onClick={() => void buy(b.multiplier, b.price, b.name)}
                 >
                   {buying === b.multiplier ? '…' : 'Купить'}
                 </button>

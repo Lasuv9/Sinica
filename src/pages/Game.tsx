@@ -10,7 +10,7 @@ interface GameProps {
 }
 
 export function Game({ user, setUser }: GameProps) {
-  const { fatLevel, isPopping, multiplier, tap } = useGame(user, setUser)
+  const { fatLevel, isPopping, lastReward, multiplier, tap } = useGame(user, setUser)
 
   return (
     <div className="page game-page">
@@ -21,13 +21,14 @@ export function Game({ user, setUser }: GameProps) {
           skinId={user.current_skin}
           fatLevel={fatLevel}
           isPopping={isPopping}
+          reward={lastReward || multiplier}
           onTap={tap}
         />
       </div>
 
       <div className="game-hint">
         {multiplier > 1 ? (
-          <span className="boost-hint">Тап = ×{multiplier} монет</span>
+          <span className="boost-hint">Тап = +{multiplier} 💰</span>
         ) : (
           <>Тапай по синице!</>
         )}
@@ -36,7 +37,9 @@ export function Game({ user, setUser }: GameProps) {
         )}
       </div>
 
-      <BoostPanel user={user} setUser={setUser} />
+      <div className="boost-dock">
+        <BoostPanel user={user} setUser={setUser} />
+      </div>
     </div>
   )
 }
