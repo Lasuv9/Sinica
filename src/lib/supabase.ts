@@ -70,11 +70,23 @@ export async function authenticateUser() {
       })
 
       if (!error && data?.success && data?.user) {
+        const active = data.active_boost || data.user.active_boost || null
+        const boostMult =
+          data.user.boost_multiplier ??
+          active?.multiplier ??
+          1
+        const boostExp =
+          data.user.boost_expires_at ??
+          active?.expires_at ??
+          null
         return {
           user: {
             ...data.user,
             owned_skins: data.owned_skins || data.user.owned_skins || ['default'],
             tap_cycle: data.user.tap_cycle ?? 0,
+            active_boost: active,
+            boost_multiplier: boostMult,
+            boost_expires_at: boostExp,
           },
         }
       }

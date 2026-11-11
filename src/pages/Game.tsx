@@ -1,5 +1,6 @@
 import { Bird } from '@/components/Bird'
 import { Balance } from '@/components/Balance'
+import { BoostPanel } from '@/components/BoostPanel'
 import { User } from '@/types'
 import { useGame } from '@/hooks/useGame'
 
@@ -9,7 +10,7 @@ interface GameProps {
 }
 
 export function Game({ user, setUser }: GameProps) {
-  const { fatLevel, isPopping, tap } = useGame(user, setUser)
+  const { fatLevel, isPopping, multiplier, tap } = useGame(user, setUser)
 
   return (
     <div className="page game-page">
@@ -25,11 +26,17 @@ export function Game({ user, setUser }: GameProps) {
       </div>
 
       <div className="game-hint">
-        Тапай по синице!
+        {multiplier > 1 ? (
+          <span className="boost-hint">Тап = ×{multiplier} монет</span>
+        ) : (
+          <>Тапай по синице!</>
+        )}
         {fatLevel > 0 && (
           <span className="fat-badge">Уровень толщины: {fatLevel}/4</span>
         )}
       </div>
+
+      <BoostPanel user={user} setUser={setUser} />
     </div>
   )
 }

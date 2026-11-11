@@ -19,6 +19,31 @@ export function getTapReward(_totalTaps: number): number {
   return 1
 }
 
+/** Временные улучшения монет (цены/длительность — отображение; сервер валидирует) */
+export const BOOSTS = [
+  { id: 'x2', name: 'X2', multiplier: 2, price: 500, durationSec: 300 },
+  { id: 'x4', name: 'X4', multiplier: 4, price: 2000, durationSec: 300 },
+  { id: 'x10', name: 'X10', multiplier: 10, price: 10000, durationSec: 300 },
+  { id: 'x100', name: 'X100', multiplier: 100, price: 100000, durationSec: 300 },
+] as const
+
+export function getActiveMultiplier(
+  boostExpiresAt?: string | null,
+  boostMultiplier?: number | null
+): number {
+  if (!boostExpiresAt || !boostMultiplier) return 1
+  if (new Date(boostExpiresAt).getTime() <= Date.now()) return 1
+  return Math.max(1, Number(boostMultiplier) || 1)
+}
+
+export function formatBoostTime(msLeft: number): string {
+  if (msLeft <= 0) return '0:00'
+  const totalSec = Math.ceil(msLeft / 1000)
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 /** Список доступных скинов */
 export const SKINS = [
   {

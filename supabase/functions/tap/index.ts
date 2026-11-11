@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateTelegram } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,67 +13,65 @@ serve(async (req) => {
   }
 
   try {
-    const { user_id, reward } = await req.json()
+    const body = await req.json()
+    const initData = body.initData as string | undefined
+    const request_id = (body.request_id as string | undefined) || crypto.randomUUID()
 
-    if (!user_id || typeof reward !== 'number' || reward < 1 || reward > 100) {
+    if (!initData) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Invalid request' }),
+        JSON.stringify({ success: false, message: 'initData required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    const auth = await authenticateTelegram(initData)
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Атомарное обновление
-    const { data, error } = await supabase.rpc('increment_tap', {
-      p_user_id: user_id,
-      p_reward: reward,
+    const { data, error } = await supabase.rpc('process_tap', {
+      p_telegram_id: auth.telegram_id,
+      p_request_id: request_id,
     })
 
-    // Fallback если RPC ещё нет
     if (error) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('coins, total_taps')
-        .eq('id', user_id)
-        .single()
+      return new Response(
+        JSON.stringify({ success: false, message: error.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-      if (!user) {
-        return new Response(
-          JSON.stringify({ success: false, message: 'User not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+    const result = Array.isArray(data) ? data[0] : data
 
-      const newCoins = user.coins + reward
-      const newTaps = user.total_taps + 1
-
-      await supabase
-        .from('users')
-        .update({ coins: newCoins, total_taps: newTaps })
-        .eq('id', user_id)
-
+    if (!result || result.success === false) {
       return new Response(
         JSON.stringify({
-          success: true,
-          coins: newCoins,
-          total_taps: newTaps,
-          reward,
+          success: false,
+          message: result?.message || 'Tap failed',
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     return new Response(
-      JSON.stringify({ success: true, ...data, reward }),
+      JSON.stringify({
+        success: true,
+        coins: result.coins,
+        total_taps: result.total_taps,
+        tap_cycle: result.tap_cycle,
+        popped: !!result.popped,
+        reward: result.reward,
+        multiplier: result.multiplier ?? 1,
+        boost_expires_at: result.boost_expires_at ?? null,
+        request_id,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
     return new Response(
-      JSON.stringify({ success: false, message: err.message }),
+      JSON.stringify({ success: false, message: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

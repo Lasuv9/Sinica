@@ -1,3 +1,8 @@
+export interface ActiveBoost {
+  multiplier: number
+  expires_at: string
+}
+
 export interface User {
   id: string
   telegram_id: number
@@ -10,6 +15,9 @@ export interface User {
   tap_cycle: number
   current_skin: string
   owned_skins?: string[]
+  active_boost?: ActiveBoost | null
+  boost_multiplier?: number
+  boost_expires_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -20,6 +28,14 @@ export interface Skin {
   image: string
   price: number
   description?: string
+}
+
+export interface BoostOffer {
+  id: string
+  name: string
+  multiplier: number
+  price: number
+  durationSec: number
 }
 
 export interface Friend {
@@ -46,6 +62,8 @@ export interface TapResponse {
   tap_cycle: number
   popped: boolean
   reward: number
+  multiplier?: number
+  boost_expires_at?: string | null
 }
 
 export interface BuySkinResponse {
