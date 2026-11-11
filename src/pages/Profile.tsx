@@ -1,8 +1,19 @@
 import { User } from '@/types'
 import { formatCoins, getFatLevel, SKINS } from '@/lib/utils'
 
+const CHANNEL_URL = 'https://t.me/sinicagame'
+
 interface ProfileProps {
   user: User
+}
+
+function openChannel() {
+  const tg = window.Telegram?.WebApp
+  if (tg?.openTelegramLink) {
+    tg.openTelegramLink(CHANNEL_URL)
+  } else {
+    window.open(CHANNEL_URL, '_blank')
+  }
 }
 
 export function Profile({ user }: ProfileProps) {
@@ -49,6 +60,10 @@ export function Profile({ user }: ProfileProps) {
           <span className="stat-label">Скин</span>
         </div>
       </div>
+
+      <button type="button" className="btn btn-primary channel-btn" onClick={openChannel}>
+        📢 Подписаться на канал
+      </button>
 
       <div className="profile-info">
         <p>
