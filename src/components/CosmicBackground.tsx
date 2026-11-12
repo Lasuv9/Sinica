@@ -1,21 +1,23 @@
-/** Decorative space chaos behind game when cosmic-bird is equipped */
+import { useEffect, useState } from 'react'
+
+/** Lightweight space background — fewer layers, no heavy blur */
 export function CosmicBackground() {
+  const [paused, setPaused] = useState(false)
+
+  useEffect(() => {
+    const onVis = () => setPaused(document.visibilityState !== 'visible')
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+
   return (
-    <div className="cosmic-bg" aria-hidden>
+    <div className={`cosmic-bg ${paused ? 'paused' : ''}`} aria-hidden>
       <div className="cosmic-stars" />
-      <div className="cosmic-nebula n1" />
-      <div className="cosmic-nebula n2" />
-      <div className="cosmic-nebula n3" />
+      <div className="cosmic-glow g-a" />
+      <div className="cosmic-glow g-b" />
       <div className="black-hole bh1" />
-      <div className="black-hole bh2" />
-      <div className="galaxy g1" />
-      <div className="galaxy g2" />
       <div className="meteor m1" />
       <div className="meteor m2" />
-      <div className="meteor m3" />
-      <div className="meteor m4" />
-      <div className="star-burst sb1" />
-      <div className="star-burst sb2" />
       <div className="cosmic-scrim" />
     </div>
   )

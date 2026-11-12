@@ -1226,7 +1226,8 @@ button, a, img {
   text-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
 }
 
-/* Cosmic background chaos */
+
+/* Cosmic background — mobile-optimized (GPU transforms only) */
 .game-page.has-cosmic-bg {
   position: relative;
   isolation: isolate;
@@ -1249,172 +1250,125 @@ button, a, img {
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #02010a;
+  background: #05030f;
+  contain: strict;
+  transform: translateZ(0);
+}
+
+.cosmic-bg.paused * {
+  animation-play-state: paused !important;
 }
 
 .cosmic-scrim {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(7, 6, 20, 0.15), rgba(7, 6, 15, 0.82) 75%);
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    rgba(7, 6, 20, 0.2),
+    rgba(7, 6, 15, 0.78) 70%
+  );
 }
 
 .cosmic-stars {
   position: absolute;
-  inset: -20%;
+  inset: 0;
+  opacity: 0.7;
   background-image:
-    radial-gradient(1px 1px at 10% 20%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 30% 60%, #c4b5fd 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 70% 30%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 85% 75%, #7dd3fc 50%, transparent 50%),
-    radial-gradient(1px 1px at 50% 50%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 15% 85%, #fde68a 50%, transparent 50%),
-    radial-gradient(1px 1px at 60% 10%, #fff 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 40% 90%, #e9d5ff 50%, transparent 50%);
-  background-size: 120px 120px, 180px 180px, 90px 90px, 150px 150px, 200px 200px, 110px 110px, 160px 160px, 140px 140px;
-  animation: stars-drift 40s linear infinite;
-  opacity: 0.85;
+    radial-gradient(1px 1px at 20% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 70% 20%, #c4b5fd, transparent),
+    radial-gradient(1px 1px at 40% 70%, #fff, transparent),
+    radial-gradient(1px 1px at 85% 60%, #7dd3fc, transparent),
+    radial-gradient(1px 1px at 15% 80%, #fde68a, transparent);
+  background-size: 100% 100%;
+  animation: stars-drift 60s linear infinite;
+  will-change: transform;
 }
 
 @keyframes stars-drift {
   from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-40px, 30px, 0); }
+  to { transform: translate3d(-16px, 12px, 0); }
 }
 
-.cosmic-nebula {
+.cosmic-glow {
   position: absolute;
+  width: 160px;
+  height: 160px;
   border-radius: 50%;
-  filter: blur(30px);
-  opacity: 0.45;
-  animation: nebula-pulse 8s ease-in-out infinite;
+  opacity: 0.35;
+  /* no filter: blur — too heavy on Android */
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.55), transparent 70%);
+  animation: glow-breathe 10s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
-.cosmic-nebula.n1 {
-  width: 220px; height: 220px;
-  left: -40px; top: 10%;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.7), transparent 70%);
+.cosmic-glow.g-a { left: -30px; top: 15%; }
+.cosmic-glow.g-b {
+  right: -40px;
+  top: 45%;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.4), transparent 70%);
+  animation-delay: -4s;
 }
 
-.cosmic-nebula.n2 {
-  width: 280px; height: 280px;
-  right: -60px; top: 35%;
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.55), transparent 70%);
-  animation-delay: -3s;
-}
-
-.cosmic-nebula.n3 {
-  width: 200px; height: 200px;
-  left: 20%; bottom: 5%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.4), transparent 70%);
-  animation-delay: -5s;
-}
-
-@keyframes nebula-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.35; }
-  50% { transform: scale(1.15); opacity: 0.55; }
+@keyframes glow-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.28; }
+  50% { transform: scale(1.12); opacity: 0.42; }
 }
 
 .black-hole {
   position: absolute;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 40%, #0a0a12 30%, #1e1b4b 55%, #7c3aed 70%, transparent 72%);
-  box-shadow:
-    0 0 20px rgba(124, 58, 237, 0.5),
-    0 0 60px rgba(56, 189, 248, 0.25);
-  animation: bh-spin 12s linear infinite;
-}
-
-.black-hole.bh1 {
-  width: 90px; height: 90px;
-  left: 8%; top: 22%;
-}
-
-.black-hole.bh2 {
-  width: 56px; height: 56px;
-  right: 12%; top: 55%;
-  animation-duration: 8s;
-  animation-direction: reverse;
+  left: 10%;
+  top: 28%;
+  background: radial-gradient(circle at 40% 40%, #000 35%, #312e81 60%, #7c3aed 68%, transparent 70%);
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.35);
+  animation: bh-spin 16s linear infinite;
+  will-change: transform;
 }
 
 @keyframes bh-spin {
-  from { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.08); }
-  to { transform: rotate(360deg) scale(1); }
-}
-
-.galaxy {
-  position: absolute;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background:
-    conic-gradient(from 0deg, transparent, rgba(125, 211, 252, 0.35), transparent 40%, rgba(167, 139, 250, 0.4), transparent 70%);
-  filter: blur(1px);
-  opacity: 0.55;
-  animation: galaxy-spin 20s linear infinite;
-}
-
-.galaxy.g1 { left: 55%; top: 12%; }
-.galaxy.g2 {
-  right: 5%; bottom: 18%;
-  width: 90px; height: 90px;
-  animation-duration: 14s;
-  animation-direction: reverse;
-}
-
-@keyframes galaxy-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
 .meteor {
   position: absolute;
-  width: 3px;
-  height: 60px;
-  background: linear-gradient(to bottom, transparent, #fff, #7dd3fc);
+  width: 2px;
+  height: 48px;
+  top: -10%;
+  background: linear-gradient(to bottom, transparent, #fff 40%, #7dd3fc);
   border-radius: 2px;
   opacity: 0;
-  animation: meteor-fall 3.5s linear infinite;
+  animation: meteor-fall 5s linear infinite;
+  will-change: transform, opacity;
 }
 
-.meteor.m1 { left: 20%; top: -10%; animation-delay: 0s; }
-.meteor.m2 { left: 60%; top: -15%; animation-delay: 1.2s; height: 80px; }
-.meteor.m3 { left: 80%; top: -8%; animation-delay: 2.1s; }
-.meteor.m4 { left: 40%; top: -12%; animation-delay: 2.8s; height: 50px; }
+.meteor.m1 { left: 25%; animation-delay: 0s; }
+.meteor.m2 { left: 65%; animation-delay: 2.4s; }
 
 @keyframes meteor-fall {
-  0% { transform: translate(0, 0) rotate(25deg); opacity: 0; }
-  10% { opacity: 1; }
-  100% { transform: translate(120px, 420px) rotate(25deg); opacity: 0; }
-}
-
-.star-burst {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 12px #fde68a, 0 0 28px #f97316;
-  animation: star-pop 4s ease-in-out infinite;
-}
-
-.star-burst.sb1 { left: 30%; top: 40%; }
-.star-burst.sb2 { right: 25%; top: 28%; animation-delay: -2s; }
-
-@keyframes star-pop {
-  0%, 100% { transform: scale(0.4); opacity: 0.3; }
-  50% { transform: scale(1.8); opacity: 1; }
+  0% { transform: translate3d(0, 0, 0) rotate(28deg); opacity: 0; }
+  8% { opacity: 0.9; }
+  100% { transform: translate3d(80px, 360px, 0) rotate(28deg); opacity: 0; }
 }
 
 .cosmic-hint {
   color: #7dd3fc;
   font-weight: 700;
-  text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
 .game-page.has-cosmic-bg .balance-card,
 .game-page.has-cosmic-bg .boost-panel {
-  background: rgba(8, 6, 18, 0.75);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(8, 6, 18, 0.78);
+  /* lighter blur for mobile */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cosmic-bg * {
+    animation: none !important;
+  }
 }

@@ -34,7 +34,7 @@ export function BoostPanel({ user, setUser }: BoostPanelProps) {
         })
       }
       setTick((t) => t + 1)
-    }, 250)
+    }, 1000)
     return () => window.clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expiresAt, user.id])
