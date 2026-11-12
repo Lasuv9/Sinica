@@ -1,3 +1,5 @@
+import type { Skin } from '@/types'
+
 /** Уровень "толстоты" синицы по tap_cycle (0–4) */
 export function getFatLevel(tapCycle: number): number {
   return Math.max(0, Math.min(4, tapCycle))
@@ -80,11 +82,11 @@ export const SKINS = [
     image: '/images/skins/cosmic-bird.png',
     price: 0,
     description: 'Эксклюзив · $5.00 USD',
-    payment: 'usd' as const,
+    payment: 'usd',
     usdPrice: 5,
     exclusive: true,
   },
-] as const
+] as Skin[]
 
 export function getSkinImage(skinId: string, fatLevel: number): string {
   if (skinId !== 'default') {
