@@ -28,6 +28,10 @@ export interface Skin {
   image: string
   price: number
   description?: string
+  /** Real-money exclusive (e.g. RollyPay) */
+  payment?: 'coins' | 'usd'
+  usdPrice?: number
+  exclusive?: boolean
 }
 
 export interface BoostOffer {
@@ -98,6 +102,7 @@ declare global {
           notificationOccurred: (type: string) => void
         }
         openTelegramLink: (url: string) => void
+        openLink: (url: string) => void
         showAlert: (message: string) => void
         showConfirm: (message: string, callback: (ok: boolean) => void) => void
       }

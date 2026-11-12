@@ -74,6 +74,16 @@ export const SKINS = [
     price: 2000,
     description: 'Синица в стиле Огр Мага',
   },
+  {
+    id: 'cosmic-bird',
+    name: 'Космическая Синица',
+    image: '/images/skins/cosmic-bird.png',
+    price: 0,
+    description: 'Эксклюзив · $5.00 USD',
+    payment: 'usd' as const,
+    usdPrice: 5,
+    exclusive: true,
+  },
 ] as const
 
 export function getSkinImage(skinId: string, fatLevel: number): string {
