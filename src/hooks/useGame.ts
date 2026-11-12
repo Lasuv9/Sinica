@@ -5,10 +5,12 @@ import { getTelegramInitData, supabase } from '@/lib/supabase'
 
 export function useGame(user: User | null, setUser: (u: User) => void) {
   const [isPopping, setIsPopping] = useState(false)
-  const [lastReward, setLastReward] = useState(0)
+  const [lastReward, setLastReward] = useState(1)
   const isAnimating = useRef(false)
   const userRef = useRef(user)
   userRef.current = user
+  const setUserRef = useRef(setUser)
+  setUserRef.current = setUser
 
   const fatLevel = user ? (user.tap_cycle ?? 0) : 0
   const multiplier = getActiveMultiplier(
@@ -28,8 +30,7 @@ export function useGame(user: User | null, setUser: (u: User) => void) {
     )
     const reward = Math.max(1, mult)
 
-    // Optimistic UI (server is source of truth on sync)
-    setUser({
+    setUserRef.current({
       ...current,
       coins: current.coins + reward,
       total_taps: current.total_taps + 1,
@@ -44,7 +45,7 @@ export function useGame(user: User | null, setUser: (u: User) => void) {
     window.setTimeout(() => {
       setIsPopping(false)
       isAnimating.current = false
-    }, 140)
+    }, 110)
 
     void (async () => {
       try {
@@ -54,13 +55,10 @@ export function useGame(user: User | null, setUser: (u: User) => void) {
             request_id: crypto.randomUUID(),
           },
         })
-
         if (error || !data?.success) return
-
         const latest = userRef.current
         if (!latest) return
-
-        setUser({
+        setUserRef.current({
           ...latest,
           coins: typeof data.coins === 'number' ? data.coins : latest.coins,
           total_taps:
@@ -74,25 +72,17 @@ export function useGame(user: User | null, setUser: (u: User) => void) {
               : latest.boost_expires_at,
           active_boost:
             data.boost_expires_at && (data.multiplier ?? 1) > 1
-              ? {
-                  multiplier: data.multiplier ?? 1,
-                  expires_at: data.boost_expires_at,
-                }
+              ? { multiplier: data.multiplier ?? 1, expires_at: data.boost_expires_at }
               : (data.multiplier ?? 1) <= 1
                 ? null
                 : latest.active_boost,
         })
-
-        if (typeof data.reward === 'number') {
-          setLastReward(data.reward)
-        }
-
-        if (data.popped) haptic('success')
+        if (typeof data.reward === 'number') setLastReward(data.reward)
       } catch (e) {
         console.warn('Tap sync error', e)
       }
     })()
-  }, [setUser])
+  }, [])
 
   return { fatLevel, isPopping, lastReward, multiplier, tap }
 }

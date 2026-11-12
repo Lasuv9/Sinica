@@ -100,11 +100,16 @@ export function getSkinImage(skinId: string, fatLevel: number): string {
   return `/images/bird-fat-${fatLevel}.png`
 }
 
+let _popAudio: HTMLAudioElement | null = null
 export function playPopSound() {
   try {
-    const audio = new Audio('/images/sounds/pop.mp3')
-    audio.volume = 0.4
-    audio.play().catch(() => {})
+    if (!_popAudio) {
+      _popAudio = new Audio('/images/sounds/pop.mp3')
+      _popAudio.volume = 0.35
+      _popAudio.preload = 'auto'
+    }
+    _popAudio.currentTime = 0
+    void _popAudio.play().catch(() => {})
   } catch {
     // ignore
   }

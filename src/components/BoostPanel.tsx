@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { User } from '@/types'
 import { BOOSTS, formatBoostTime, formatCoins, getActiveMultiplier, haptic } from '@/lib/utils'
 import { getTelegramInitData, supabase } from '@/lib/supabase'
@@ -8,7 +8,7 @@ interface BoostPanelProps {
   setUser: (u: User) => void
 }
 
-export function BoostPanel({ user, setUser }: BoostPanelProps) {
+function BoostPanelInner({ user, setUser }: BoostPanelProps) {
   const [buying, setBuying] = useState<number | null>(null)
   const [pendingLabel, setPendingLabel] = useState<string | null>(null)
   const [, setTick] = useState(0)
@@ -160,3 +160,12 @@ export function BoostPanel({ user, setUser }: BoostPanelProps) {
     </div>
   )
 }
+
+export const BoostPanel = memo(BoostPanelInner, (a, b) => {
+  return (
+    a.user.coins === b.user.coins &&
+    a.user.boost_expires_at === b.user.boost_expires_at &&
+    a.user.boost_multiplier === b.user.boost_multiplier &&
+    a.user.active_boost?.expires_at === b.user.active_boost?.expires_at
+  )
+})

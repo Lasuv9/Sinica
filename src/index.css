@@ -272,7 +272,10 @@ body::after {
 
 
 .bird-container {
-  perspective: 700px;
+  perspective: 560px;
+  contain: layout style;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 
   position: relative;
   width: 260px;
@@ -424,7 +427,7 @@ body::after {
     0 0 8px var(--neon),
     0 0 16px var(--neon-glow);
   pointer-events: none;
-  animation: spark-fly 0.55s ease-out forwards;
+  animation: spark-fly 0.35s ease-out forwards;
   z-index: 5;
 }
 
@@ -466,7 +469,7 @@ body::after {
   color: var(--neon);
   text-shadow: 0 0 16px var(--neon-glow);
   pointer-events: none;
-  animation: float-up 0.65s ease forwards;
+  animation: float-up 0.4s ease forwards;
   z-index: 6;
 }
 

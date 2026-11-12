@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { formatCoins } from '@/lib/utils'
 
 interface BalanceProps {
@@ -5,7 +6,7 @@ interface BalanceProps {
   totalTaps: number
 }
 
-export function Balance({ coins, totalTaps }: BalanceProps) {
+function BalanceInner({ coins, totalTaps }: BalanceProps) {
   return (
     <div className="balance-card">
       <div className="balance-item">
@@ -20,3 +21,5 @@ export function Balance({ coins, totalTaps }: BalanceProps) {
     </div>
   )
 }
+
+export const Balance = memo(BalanceInner)
