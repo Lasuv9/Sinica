@@ -1377,7 +1377,8 @@ button, a, img {
 }
 
 
-/* Kind bird building background */
+
+/* Kind bird background — ONLY when skin kind-bird is equipped */
 .game-page.has-kind-bg {
   position: relative;
   isolation: isolate;
@@ -1389,31 +1390,119 @@ button, a, img {
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  contain: strict;
+  background: #0a1628;
+}
+
+.kind-bird-bg.paused * {
+  animation-play-state: paused !important;
 }
 
 .kind-bird-bg-image {
   position: absolute;
-  inset: 0;
+  inset: -4%;
   background-size: cover;
   background-position: center;
-  transform: scale(1.05);
+  transform: scale(1.06);
+  animation: kind-pan 28s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes kind-pan {
+  from { transform: scale(1.06) translate3d(0, 0, 0); }
+  to { transform: scale(1.1) translate3d(-1.5%, 1%, 0); }
+}
+
+.kind-bird-wave {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  height: 28%;
+  bottom: 0;
+  opacity: 0.22;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(56, 189, 248, 0.15) 40%,
+    rgba(14, 165, 233, 0.25)
+  );
+  animation: kind-wave 7s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.kind-bird-wave.w1 { bottom: 0; animation-duration: 7s; }
+.kind-bird-wave.w2 {
+  bottom: 4%;
+  opacity: 0.14;
+  animation-duration: 9s;
+  animation-delay: -2s;
+}
+
+@keyframes kind-wave {
+  from { transform: translate3d(0, 4px, 0); }
+  to { transform: translate3d(0, -8px, 0); }
+}
+
+.kind-bird-sparkle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(125, 211, 252, 0.8);
+  opacity: 0.5;
+  animation: kind-sparkle 3.5s ease-in-out infinite;
+}
+
+.kind-bird-sparkle.s1 { left: 22%; top: 30%; }
+.kind-bird-sparkle.s2 { right: 18%; top: 42%; animation-delay: -1.6s; }
+
+@keyframes kind-sparkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.7); }
+  50% { opacity: 0.85; transform: scale(1.2); }
 }
 
 .kind-bird-bg-scrim {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(7, 6, 15, 0.35), rgba(7, 6, 15, 0.78));
+    linear-gradient(180deg, rgba(7, 6, 15, 0.4), rgba(7, 6, 15, 0.8));
+}
+
+.kind-bird-badge {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #e0f2fe;
+  background: rgba(8, 20, 36, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
 }
 
 .kind-hint {
   color: #7dd3fc;
   font-weight: 700;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
 .game-page.has-kind-bg .balance-card,
 .game-page.has-kind-bg .boost-panel {
-  background: rgba(8, 6, 18, 0.75);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(8, 6, 18, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kind-bird-bg * {
+    animation: none !important;
+  }
 }
