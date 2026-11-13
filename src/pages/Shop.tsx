@@ -9,12 +9,6 @@ interface ShopProps {
   setUser: (u: User) => void
 }
 
-/** skin_id → Edge Function для RollyPay */
-const USD_PAYMENT_FN: Record<string, string> = {
-  'cosmic-bird': 'create-cosmic-bird-payment',
-  'kind-bird': 'create-kind-bird-payment',
-}
-
 function friendlyPaymentError(codeOrMessage: string): string {
   const m = codeOrMessage.toUpperCase()
   if (m.includes('ROLLYPAY_NOT_CONFIGURED')) {
@@ -27,20 +21,10 @@ function friendlyPaymentError(codeOrMessage: string): string {
     return 'Не удалось создать платёж. Попробуй ещё раз.'
   }
   if (m.includes('SKIN_ALREADY_OWNED') || m.includes('REAL_MONEY_ONLY')) {
-    return 'Этот скин уже куплен или доступен только за реальные деньги.'
-  }
-  // Function not deployed / 404 looks like network error in supabase-js
-  if (
-    m.includes('PAYMENT_FUNCTION_UNAVAILABLE') ||
-    m.includes('NOT FOUND') ||
-    m.includes('404') ||
-    m.includes('FUNCTIONSRELAYERROR') ||
-    m.includes('FUNCTION NOT FOUND')
-  ) {
-    return 'Оплата «Доброй синицы» ещё не подключена на сервере. Напиши в поддержку или попробуй позже.'
+    return 'Этот скин уже куплен.'
   }
   if (m.includes('FAILED TO SEND') || m.includes('NETWORK') || m.includes('FETCH')) {
-    return 'Не удалось связаться с сервером оплаты. Если интернет есть — функция оплаты, возможно, не задеплоена.'
+    return 'Не удалось связаться с сервером оплаты. Попробуй позже.'
   }
   return 'Не удалось начать оплату. Попробуй позже.'
 }
@@ -59,16 +43,17 @@ export function Shop({ user, setUser }: ShopProps) {
           ...fresh,
           owned_skins: fresh.owned_skins || user.owned_skins,
         })
-        const nextPending = { ...pendingUsd }
-        for (const id of Object.keys(USD_PAYMENT_FN)) {
-          if (fresh.owned_skins?.includes(id)) nextPending[id] = false
-        }
-        setPendingUsd(nextPending)
+        setPendingUsd((prev) => {
+          const next = { ...prev }
+          if (fresh.owned_skins?.includes('kind-bird')) next['kind-bird'] = false
+          if (fresh.owned_skins?.includes('cosmic-bird')) next['cosmic-bird'] = false
+          return next
+        })
       }
     } catch (e) {
       console.warn('refresh user failed', e)
     }
-  }, [setUser, user, pendingUsd])
+  }, [setUser, user])
 
   useEffect(() => {
     const onVisible = () => {
@@ -114,13 +99,69 @@ export function Shop({ user, setUser }: ShopProps) {
     }
   }
 
-  const handleBuyUsd = async (skinId: string) => {
-    if (loading || owned.includes(skinId)) return
-    const fn = USD_PAYMENT_FN[skinId]
-    if (!fn) {
-      window.Telegram?.WebApp?.showAlert('Оплата для этого скина недоступна')
+  /** Космическая — без изменений: через invoke create-cosmic-bird-payment */
+  const handleBuyCosmic = async () => {
+    if (loading || owned.includes('cosmic-bird')) return
+    const initData = getTelegramInitData()
+    if (!initData) {
+      window.Telegram?.WebApp?.showAlert('Открой Sinica через Telegram-бота')
       return
     }
+    setLoading('cosmic-bird')
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'create-cosmic-bird-payment',
+        { body: { initData } }
+      )
+      if (error) throw error
+      if (
+        data?.code === 'SKIN_ALREADY_OWNED' ||
+        String(data?.message || '').includes('SKIN_ALREADY_OWNED')
+      ) {
+        await refreshUser()
+        haptic('success')
+        window.Telegram?.WebApp?.showAlert('Скин уже куплен')
+        return
+      }
+      if (!data?.success || !data?.pay_url) {
+        throw new Error(friendlyPaymentError(String(data?.code || data?.message || '')))
+      }
+      const rub =
+        data.charge_amount != null
+          ? `${data.charge_amount} ${data.charge_currency || 'RUB'}`
+          : data.display_amount || ''
+      const go = () => {
+        setPendingUsd((p) => ({ ...p, 'cosmic-bird': true }))
+        const tg = window.Telegram?.WebApp
+        if (tg?.openLink) tg.openLink(data.pay_url)
+        else window.open(data.pay_url, '_blank')
+      }
+      if (rub && window.Telegram?.WebApp?.showConfirm) {
+        window.Telegram.WebApp.showConfirm(`К оплате: ${rub}\nПерейти к оплате?`, (ok) => {
+          if (ok) go()
+        })
+      } else {
+        if (rub) window.Telegram?.WebApp?.showAlert?.(`К оплате: ${rub}`)
+        go()
+      }
+    } catch (e) {
+      console.error(e)
+      haptic('error')
+      window.Telegram?.WebApp?.showAlert(
+        e instanceof Error ? friendlyPaymentError(e.message) : 'Ошибка оплаты'
+      )
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  /**
+   * Добрая Синица → явный POST /functions/v1/create-kind-bird-payment
+   * body: { initData }
+   * Скин выдаёт только webhook, не frontend.
+   */
+  const handleBuyKindBird = async () => {
+    if (loading || owned.includes('kind-bird')) return
 
     const initData = getTelegramInitData()
     if (!initData) {
@@ -128,22 +169,40 @@ export function Shop({ user, setUser }: ShopProps) {
       return
     }
 
-    setLoading(skinId)
+    const base = import.meta.env.VITE_SUPABASE_URL
+    const anon = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!base || !anon) {
+      window.Telegram?.WebApp?.showAlert('Оплата временно недоступна')
+      return
+    }
+
+    setLoading('kind-bird')
     try {
-      const { data, error } = await supabase.functions.invoke(fn, {
-        body: { initData },
+      const res = await fetch(`${base}/functions/v1/create-kind-bird-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${anon}`,
+          apikey: anon,
+        },
+        body: JSON.stringify({ initData }),
       })
 
-      if (error) {
-        const em = String((error as { message?: string }).message || error)
-        // supabase-js: missing Edge Function → "Failed to send a request to the Edge Function"
-        if (
-          /failed to send|not found|404|relay/i.test(em) &&
-          fn.includes('kind-bird')
-        ) {
-          throw new Error('PAYMENT_FUNCTION_UNAVAILABLE')
-        }
-        throw new Error(em)
+      let data: {
+        success?: boolean
+        pay_url?: string
+        order_id?: string
+        charge_amount?: number | string
+        charge_currency?: string
+        display_amount?: string
+        code?: string
+        message?: string
+      } = {}
+
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error('Не удалось прочитать ответ сервера оплаты')
       }
 
       if (
@@ -156,9 +215,16 @@ export function Shop({ user, setUser }: ShopProps) {
         return
       }
 
+      if (!res.ok && !data?.success) {
+        throw new Error(
+          friendlyPaymentError(String(data?.code || data?.message || res.status))
+        )
+      }
+
       if (!data?.success || !data?.pay_url) {
-        const code = data?.code || data?.message || ''
-        throw new Error(friendlyPaymentError(String(code)))
+        throw new Error(
+          friendlyPaymentError(String(data?.code || data?.message || ''))
+        )
       }
 
       const rub =
@@ -166,23 +232,23 @@ export function Shop({ user, setUser }: ShopProps) {
           ? `${data.charge_amount} ${data.charge_currency || 'RUB'}`
           : data.display_amount || ''
 
-      const go = () => {
-        setPendingUsd((p) => ({ ...p, [skinId]: true }))
+      const openPay = () => {
+        setPendingUsd((p) => ({ ...p, 'kind-bird': true }))
         const tg = window.Telegram?.WebApp
-        if (tg?.openLink) tg.openLink(data.pay_url)
+        if (tg?.openLink) tg.openLink(data.pay_url!)
         else window.open(data.pay_url, '_blank')
       }
 
       if (rub && window.Telegram?.WebApp?.showConfirm) {
         window.Telegram.WebApp.showConfirm(
-          `К оплате: ${rub}\nПерейти к оплате?`,
+          `К оплате: ${rub}\nПерейти к оплате «Добрая Синица»?`,
           (ok) => {
-            if (ok) go()
+            if (ok) openPay()
           }
         )
       } else {
         if (rub) window.Telegram?.WebApp?.showAlert?.(`К оплате: ${rub}`)
-        go()
+        openPay()
       }
     } catch (e) {
       console.error(e)
@@ -221,6 +287,12 @@ export function Shop({ user, setUser }: ShopProps) {
           const isOwned = owned.includes(skin.id) || (!isUsd && skin.price === 0)
           const isPending = isUsd && !!pendingUsd[skin.id] && !isOwned
 
+          const onBuy = () => {
+            if (skin.id === 'kind-bird') return void handleBuyKindBird()
+            if (skin.id === 'cosmic-bird') return void handleBuyCosmic()
+            return void handleBuyCoins(skin.id)
+          }
+
           return (
             <ShopItem
               key={skin.id}
@@ -233,9 +305,7 @@ export function Shop({ user, setUser }: ShopProps) {
                   : user.coins >= skin.price && loading === null
               }
               pending={isPending}
-              onBuy={() =>
-                isUsd ? void handleBuyUsd(skin.id) : void handleBuyCoins(skin.id)
-              }
+              onBuy={onBuy}
               onSelect={() => handleSelect(skin.id)}
             />
           )
