@@ -29,8 +29,18 @@ function friendlyPaymentError(codeOrMessage: string): string {
   if (m.includes('SKIN_ALREADY_OWNED') || m.includes('REAL_MONEY_ONLY')) {
     return 'Этот скин уже куплен или доступен только за реальные деньги.'
   }
+  // Function not deployed / 404 looks like network error in supabase-js
+  if (
+    m.includes('PAYMENT_FUNCTION_UNAVAILABLE') ||
+    m.includes('NOT FOUND') ||
+    m.includes('404') ||
+    m.includes('FUNCTIONSRELAYERROR') ||
+    m.includes('FUNCTION NOT FOUND')
+  ) {
+    return 'Оплата «Доброй синицы» ещё не подключена на сервере. Напиши в поддержку или попробуй позже.'
+  }
   if (m.includes('FAILED TO SEND') || m.includes('NETWORK') || m.includes('FETCH')) {
-    return 'Нет связи. Проверь интернет и попробуй снова.'
+    return 'Не удалось связаться с сервером оплаты. Если интернет есть — функция оплаты, возможно, не задеплоена.'
   }
   return 'Не удалось начать оплату. Попробуй позже.'
 }
@@ -124,7 +134,17 @@ export function Shop({ user, setUser }: ShopProps) {
         body: { initData },
       })
 
-      if (error) throw error
+      if (error) {
+        const em = String((error as { message?: string }).message || error)
+        // supabase-js: missing Edge Function → "Failed to send a request to the Edge Function"
+        if (
+          /failed to send|not found|404|relay/i.test(em) &&
+          fn.includes('kind-bird')
+        ) {
+          throw new Error('PAYMENT_FUNCTION_UNAVAILABLE')
+        }
+        throw new Error(em)
+      }
 
       if (
         data?.code === 'SKIN_ALREADY_OWNED' ||
