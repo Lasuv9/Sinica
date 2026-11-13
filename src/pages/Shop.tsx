@@ -9,6 +9,12 @@ interface ShopProps {
   setUser: (u: User) => void
 }
 
+/** skin_id → Edge Function для RollyPay */
+const USD_PAYMENT_FN: Record<string, string> = {
+  'cosmic-bird': 'create-cosmic-bird-payment',
+  'kind-bird': 'create-kind-bird-payment',
+}
+
 function friendlyPaymentError(codeOrMessage: string): string {
   const m = codeOrMessage.toUpperCase()
   if (m.includes('ROLLYPAY_NOT_CONFIGURED')) {
@@ -20,8 +26,8 @@ function friendlyPaymentError(codeOrMessage: string): string {
   if (m.includes('ROLLYPAY_PAYMENT_CREATE_FAILED')) {
     return 'Не удалось создать платёж. Попробуй ещё раз.'
   }
-  if (m.includes('SKIN_ALREADY_OWNED')) {
-    return 'Этот скин уже куплен.'
+  if (m.includes('SKIN_ALREADY_OWNED') || m.includes('REAL_MONEY_ONLY')) {
+    return 'Этот скин уже куплен или доступен только за реальные деньги.'
   }
   if (m.includes('FAILED TO SEND') || m.includes('NETWORK') || m.includes('FETCH')) {
     return 'Нет связи. Проверь интернет и попробуй снова.'
@@ -31,7 +37,7 @@ function friendlyPaymentError(codeOrMessage: string): string {
 
 export function Shop({ user, setUser }: ShopProps) {
   const [loading, setLoading] = useState<string | null>(null)
-  const [pendingCosmic, setPendingCosmic] = useState(false)
+  const [pendingUsd, setPendingUsd] = useState<Record<string, boolean>>({})
   const owned = user.owned_skins || ['default']
 
   const refreshUser = useCallback(async () => {
@@ -43,21 +49,20 @@ export function Shop({ user, setUser }: ShopProps) {
           ...fresh,
           owned_skins: fresh.owned_skins || user.owned_skins,
         })
-        if (fresh.owned_skins?.includes('cosmic-bird')) {
-          setPendingCosmic(false)
+        const nextPending = { ...pendingUsd }
+        for (const id of Object.keys(USD_PAYMENT_FN)) {
+          if (fresh.owned_skins?.includes(id)) nextPending[id] = false
         }
+        setPendingUsd(nextPending)
       }
     } catch (e) {
       console.warn('refresh user failed', e)
     }
-  }, [setUser, user])
+  }, [setUser, user, pendingUsd])
 
-  // После возврата из оплаты / фокус окна
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        void refreshUser()
-      }
+      if (document.visibilityState === 'visible') void refreshUser()
     }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)
@@ -71,7 +76,6 @@ export function Shop({ user, setUser }: ShopProps) {
   const handleBuyCoins = async (skinId: string) => {
     if (loading || owned.includes(skinId)) return
     setLoading(skinId)
-
     try {
       const { data, error } = await supabase.functions.invoke('buy-skin', {
         body: {
@@ -80,10 +84,8 @@ export function Shop({ user, setUser }: ShopProps) {
           request_id: crypto.randomUUID(),
         },
       })
-
       if (error) throw error
       if (!data?.success) throw new Error(data?.message || 'Не удалось купить скин')
-
       setUser({
         ...user,
         coins: data.coins,
@@ -102,8 +104,13 @@ export function Shop({ user, setUser }: ShopProps) {
     }
   }
 
-  const handleBuyCosmic = async () => {
-    if (loading || owned.includes('cosmic-bird')) return
+  const handleBuyUsd = async (skinId: string) => {
+    if (loading || owned.includes(skinId)) return
+    const fn = USD_PAYMENT_FN[skinId]
+    if (!fn) {
+      window.Telegram?.WebApp?.showAlert('Оплата для этого скина недоступна')
+      return
+    }
 
     const initData = getTelegramInitData()
     if (!initData) {
@@ -111,16 +118,18 @@ export function Shop({ user, setUser }: ShopProps) {
       return
     }
 
-    setLoading('cosmic-bird')
+    setLoading(skinId)
     try {
-      const { data, error } = await supabase.functions.invoke(
-        'create-cosmic-bird-payment',
-        { body: { initData } }
-      )
+      const { data, error } = await supabase.functions.invoke(fn, {
+        body: { initData },
+      })
 
       if (error) throw error
 
-      if (data?.code === 'SKIN_ALREADY_OWNED' || data?.message?.includes?.('SKIN_ALREADY_OWNED')) {
+      if (
+        data?.code === 'SKIN_ALREADY_OWNED' ||
+        String(data?.message || '').includes('SKIN_ALREADY_OWNED')
+      ) {
         await refreshUser()
         haptic('success')
         window.Telegram?.WebApp?.showAlert('Скин уже куплен')
@@ -138,30 +147,21 @@ export function Shop({ user, setUser }: ShopProps) {
           : data.display_amount || ''
 
       const go = () => {
-        setPendingCosmic(true)
+        setPendingUsd((p) => ({ ...p, [skinId]: true }))
         const tg = window.Telegram?.WebApp
-        if (tg?.openLink) {
-          tg.openLink(data.pay_url)
-        } else if (tg?.openTelegramLink && String(data.pay_url).includes('t.me')) {
-          tg.openTelegramLink(data.pay_url)
-        } else {
-          window.open(data.pay_url, '_blank')
-        }
+        if (tg?.openLink) tg.openLink(data.pay_url)
+        else window.open(data.pay_url, '_blank')
       }
 
-      if (rub) {
-        window.Telegram?.WebApp?.showConfirm?.(
+      if (rub && window.Telegram?.WebApp?.showConfirm) {
+        window.Telegram.WebApp.showConfirm(
           `К оплате: ${rub}\nПерейти к оплате?`,
           (ok) => {
             if (ok) go()
           }
         )
-        // Fallback if showConfirm missing
-        if (!window.Telegram?.WebApp?.showConfirm) {
-          window.Telegram?.WebApp?.showAlert?.(`К оплате: ${rub}`)
-          go()
-        }
       } else {
+        if (rub) window.Telegram?.WebApp?.showAlert?.(`К оплате: ${rub}`)
         go()
       }
     } catch (e) {
@@ -199,8 +199,7 @@ export function Shop({ user, setUser }: ShopProps) {
         {SKINS.map((skin) => {
           const isUsd = skin.payment === 'usd'
           const isOwned = owned.includes(skin.id) || (!isUsd && skin.price === 0)
-          const isCosmicPending =
-            isUsd && skin.id === 'cosmic-bird' && pendingCosmic && !isOwned
+          const isPending = isUsd && !!pendingUsd[skin.id] && !isOwned
 
           return (
             <ShopItem
@@ -208,10 +207,14 @@ export function Shop({ user, setUser }: ShopProps) {
               skin={skin}
               owned={isOwned}
               current={user.current_skin === skin.id}
-              canBuy={isUsd ? loading === null : user.coins >= skin.price && loading === null}
-              pending={isCosmicPending}
+              canBuy={
+                isUsd
+                  ? loading === null
+                  : user.coins >= skin.price && loading === null
+              }
+              pending={isPending}
               onBuy={() =>
-                isUsd ? void handleBuyCosmic() : void handleBuyCoins(skin.id)
+                isUsd ? void handleBuyUsd(skin.id) : void handleBuyCoins(skin.id)
               }
               onSelect={() => handleSelect(skin.id)}
             />

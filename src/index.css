@@ -1375,3 +1375,45 @@ button, a, img {
     animation: none !important;
   }
 }
+
+
+/* Kind bird building background */
+.game-page.has-kind-bg {
+  position: relative;
+  isolation: isolate;
+}
+
+.kind-bird-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.kind-bird-bg-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.05);
+}
+
+.kind-bird-bg-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 6, 15, 0.35), rgba(7, 6, 15, 0.78));
+}
+
+.kind-hint {
+  color: #7dd3fc;
+  font-weight: 700;
+}
+
+.game-page.has-kind-bg .balance-card,
+.game-page.has-kind-bg .boost-panel {
+  background: rgba(8, 6, 18, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}

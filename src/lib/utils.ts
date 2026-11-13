@@ -86,6 +86,16 @@ export const SKINS = [
     usdPrice: 5,
     exclusive: true,
   },
+  {
+    id: 'kind-bird',
+    name: 'Добрая Синица',
+    image: '/images/skins/kind-bird.png',
+    price: 0,
+    description: 'Эксклюзив · $2.00 USD',
+    payment: 'usd',
+    usdPrice: 2,
+    exclusive: true,
+  },
 ] as Skin[]
 
 export function getSkinImage(skinId: string, fatLevel: number): string {

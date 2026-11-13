@@ -63,7 +63,7 @@ export function ShopItem({
             disabled={!canBuy}
             onClick={onBuy}
           >
-            {isUsd ? `Купить за $5` : 'Купить'}
+            {isUsd ? `Купить за $${Number(skin.usdPrice ?? 5).toFixed(0)}` : 'Купить'}
           </button>
         )}
       </div>
